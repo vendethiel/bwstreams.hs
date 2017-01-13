@@ -8,17 +8,20 @@ module Request (
 
 import Codec.Compression.GZip (decompress)
 import Control.Arrow (second)
-import Control.Monad (liftM, (>=>))
+import Control.Monad (liftM, (>=>), void)
+import Control.Monad.Extra (discard)
 import qualified Data.ByteString.Lazy as B
 import Data.ByteString.Lazy.Char8 (unpack)
 import Data.Functor.Monadic ((>=$>))
-import Network.Browser (BrowserAction (..), browse, request, defaultGETRequest_)
+import Network.Browser (BrowserAction (..), browse, request, setOutHandler, defaultGETRequest_)
 import Network.HTTP (Request, Response, getRequest, getResponseBody, rspBody)
 import Network.HTTP.Headers (HeaderName (..), findHeader, replaceHeader)
 import Network.TCP (HStream, HandleStream)
 import Network.URI (URI, parseURI)
 
-gzipRequest :: URI -> BrowserAction (HandleStream B.ByteString) (URI, Response B.ByteString)
+type RequestAction = BrowserAction (HandleStream B.ByteString) (URI, Response B.ByteString)
+
+gzipRequest :: URI -> RequestAction
 gzipRequest
   = liftM (second unzipIfNeeded)
   . request
@@ -34,5 +37,8 @@ gzipRequest
 actionToString :: (URI, Response B.ByteString) -> String
 actionToString = unpack . rspBody . snd
 
+silenceReq :: RequestAction -> RequestAction
+silenceReq = (setOutHandler discard *>)
+
 gzipSimpleHTTP :: String -> IO (Maybe String)
-gzipSimpleHTTP = sequence . (parseURI >=$> gzipRequest >=$> browse >=$> fmap actionToString)
+gzipSimpleHTTP = sequence . (parseURI >=$> gzipRequest >=$> silenceReq >=$> browse >=$> fmap actionToString)
