@@ -8,15 +8,15 @@ module Request (
 
 import Codec.Compression.GZip (decompress)
 import Control.Arrow (second)
-import Control.Monad (liftM, (>=>), void)
+import Control.Monad (liftM)
 import Control.Monad.Extra (discard)
 import qualified Data.ByteString.Lazy as B
 import Data.ByteString.Lazy.Char8 (unpack)
 import Data.Functor.Monadic ((>=$>))
-import Network.Browser (BrowserAction (..), browse, request, setOutHandler, defaultGETRequest_)
-import Network.HTTP (Request, Response, getRequest, getResponseBody, rspBody)
+import Network.Browser (BrowserAction, browse, request, setOutHandler, defaultGETRequest_)
+import Network.HTTP (Response, rspBody)
 import Network.HTTP.Headers (HeaderName (..), findHeader, replaceHeader)
-import Network.TCP (HStream, HandleStream)
+import Network.TCP (HandleStream)
 import Network.URI (URI, parseURI)
 
 type RequestAction = BrowserAction (HandleStream B.ByteString) (URI, Response B.ByteString)
@@ -32,13 +32,13 @@ gzipRequest
       | isGz rsp  = rsp { rspBody = decompress $ rspBody rsp }
       | otherwise = rsp
       where
-        isGz rsp = maybe False (== "gzip") $ findHeader HdrContentEncoding rsp
+        isGz = maybe False (== "gzip") . findHeader HdrContentEncoding
 
-actionToString :: (URI, Response B.ByteString) -> String
-actionToString = unpack . rspBody . snd
+responseToString :: (URI, Response B.ByteString) -> String
+responseToString = unpack . rspBody . snd
 
 silenceReq :: RequestAction -> RequestAction
 silenceReq = (setOutHandler discard *>)
 
 gzipSimpleHTTP :: String -> IO (Maybe String)
-gzipSimpleHTTP = sequence . (parseURI >=$> gzipRequest >=$> silenceReq >=$> browse >=$> fmap actionToString)
+gzipSimpleHTTP = sequence . (parseURI >=$> gzipRequest >=$> silenceReq >=$> browse >=$> fmap responseToString)

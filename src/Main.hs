@@ -1,8 +1,7 @@
 module Main where
 
-import Control.Monad (void)
 import Data.Foldable (traverse_)
-import Network.HTTP (getRequest, simpleHTTP, getResponseBody)
+
 import Request (gzipSimpleHTTP)
 import TLParser (getGameStreams)
 
