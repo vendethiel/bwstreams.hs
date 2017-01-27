@@ -6,4 +6,5 @@ extra-deps:
 - functor-monadic-0.1.0.3
 - text-1.2.2.1
 - monad-extras-0.5.11
+- xml-conduit-1.3.5
 resolver: lts-7.14
