@@ -14,12 +14,6 @@ readOneOf :: [String] -> IO String -> IO String
 readOneOf xs get = get >>= \val -> fromMaybe
     (putStrLn "Invalid pick" >> readOneOf xs get)
     (return <$> find (== val) xs)
---readOneOf :: [a] -> IO a -> IO a
---readOneOf xs get = do
---  val <- get
---  if get `elem` xs
---    then return get
---    else putStrLn "Invalid choice" >> readOneOf xs f
 
 lowerStr :: String -> String
 lowerStr = fmap toLower
@@ -29,6 +23,8 @@ pickStream streams = do
   putStrLn "Pick a stream"
   traverse_ (putStrLn . formatName) streams
   choice <- readOneOf (lowerStr <$> fst <$> streams) (lowerStr <$> getLine)
+  -- TODO find a way not to call find again, without making readOneOf aware of the tuple layout...
+  --let krName = fromJust $ snd <$>
   putStrLn $ "Your choice is " ++ choice
 
 process :: String -> IO ()
