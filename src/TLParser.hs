@@ -1,23 +1,26 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module TLParser (
+  Stream, enName, krName,
   getGameStreams
 ) where
 
-import Debug.Trace
-import Control.Arrow ((&&&))
 import Control.Exception (SomeException) -- fck you xml lib
-import Control.Monad ((>=>), join)
-import Data.Bifunctor (bimap)
+import Control.Monad ((>=>))
 import Data.ByteString.Lazy.UTF8 (fromString)
 import Data.Functor.Monadic ((<$=<), (>$>))
 import qualified Data.Text as T
 import Text.XML (parseLBS, def)
-import Text.XML.Cursor (Cursor, fromDocument, element, content, attributeIs, attribute, child, node, (&//), ($//))
+-- note: GHC says Cursor is redundent on the following line. Lies.
+import Text.XML.Cursor (Cursor, fromDocument, element, content, attributeIs, attribute, child, node, ($//))
+
+data Stream = Stream { enName :: String, krName :: String }
 
 cursorFor :: String -> Either SomeException Cursor
 cursorFor = fromDocument <$=< (parseLBS def . fromString)
 
-selector :: String -> Cursor -> [(T.Text, T.Text)]
-selector game cursor = zip titles contents
+selector :: String -> Cursor -> [Stream]
+selector game cursor = zipWith Stream (T.unpack <$> titles) (T.unpack <$> contents)
   where
     nodes :: [Cursor]
     nodes = cursor $// element "stream"
@@ -30,7 +33,6 @@ selector game cursor = zip titles contents
     contents :: [T.Text] -- children of each node, get the content nodes, concat them, then concat the child's contents (we don't statically know that there's only one child)
     contents = nodes >$> child >$> fmap (T.concat . content) >$> T.concat
 
-getGameStreams :: String -> String -> Either SomeException [(String, String)]
-getGameStreams game xml = (fmap $ join bimap T.unpack) <$> selector game <$> cursorFor xml
-                                -- join+bimap to map the tuple could use lenses, i.e. fmap (& both %~ T.unpack)
+getGameStreams :: String -> String -> Either SomeException [Stream]
+getGameStreams game xml = selector game <$> cursorFor xml
 
