@@ -2,21 +2,22 @@ module LiveStream (
   launchLiveStream
 ) where
 
+import Control.Monad.Extra (skip)
 import Data.Maybe (fromMaybe)
+import System.Environment (getExecutablePath)
 import System.Info (os)
+import System.FilePath.Posix (takeDirectory)
 import System.Process (readProcess)
 
 launchLiveStream :: String -> IO ()
-launchLiveStream url = fromMaybe (putStrLn $ "Operating System unrecognized: " ++ os) $ do
-  path <- vlcPath
-  return $ readProcess "livestreamer" [
-    "--quiet", -- not strictly needed as we discard output
+launchLiveStream url = do
+  execPath <- getExecutablePath
+  player <- readFile (takeDirectory execPath ++ "/../path.txt")
+  output <- readProcess "livestreamer" [
+    "--quiet",
     "--loglevel=error",
-    "--player=" ++ path ++ " --file-caching=5000 --network-caching=5000",
+    "--player=" ++ player,
     url
-    ] "" >>= putStrLn
-  
-vlcPath :: Maybe String
-vlcPath = case os of
-  "darwin" -> Just "/Applications/VLC.app/Contents/MacOS/VLC"
-  "mingw"  -> Just "C:\Program Files\VideoLAN\VLC\vlc.exe" -- TODO "C:\Program Files (x86)\VideoLAN\VLC\vlc.exe"
+    ] ""
+  putStrLn output
+  getLine >> skip -- pause after program
